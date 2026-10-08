@@ -29,24 +29,54 @@ SCENARIOS = [
         "criterion": 2,
     },
     {
-        # A user with nothing saved. One of unit 4's three failure modes.
+        # Criterion 3 — state. Does a word from selected_item's title show up
+        # in the outfit suggestion? Any normal query works; this one lands on
+        # lst_013, "90s Silk Slip Dress — Floral, Midi Length".
+        "name": "outfit mentions the selected item",
+        "query": "silk slip dress under $40",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    # Criterion 4 — "for 5 different items", so five queries that each land on
+    # a different listing, across all three platforms. Try 1 of each is the
+    # criterion's five tries; tries 2-5 are extra evidence.
+    {
+        "name": "fit card item 1 (lst_002, depop)",
+        "query": "vintage graphic tee under $30",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card item 2 (lst_004, poshmark)",
+        "query": "90s track jacket in size M",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card item 3 (lst_003, thredUp)",
+        "query": "oversized flannel shirt",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card item 4 (lst_005, depop)",
+        "query": "corduroy wide-leg pants",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        "name": "fit card item 5 (lst_019, poshmark)",
+        "query": "platform sneakers size 8",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # A user with nothing saved. Criterion 5, and one of the three failure modes.
         "name": "empty wardrobe",
         "query": "denim jacket under $50",
         "wardrobe": "empty",
-        "criterion": None,
+        "criterion": 5,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
-    #
-    # Set "criterion" to the number in criteria.md that the scenario tests.
-    # "criterion": None means a diagnostic run — useful to have, but it isn't
-    # one of your five, and run_eval.py marks it as such in the table.
-    #
-    # For a state criterion, any normal query works — what you're checking is
-    # what ends up in the session, not what the user typed.
-    #
-    # For a fit-card criterion, you probably want the SAME query listed more
-    # than once, or several different items, depending on what your criterion
-    # actually says.
 ]
 
 WARDROBES = ("example", "empty")

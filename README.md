@@ -216,9 +216,17 @@ Nothing beats the effortless look of a broken-in medium wash, especially when pa
 - *What came back:* The first version of `parse_query` turned `90s track jacket in size M` into the description `90s track jacket in`. It removed `size M` but left the word "in" behind.
 - *What I changed:* The size pattern now also removes an optional `in` before `size`, so the description comes out as `90s track jacket`. I also checked that the session carried the item through: the search's first result and `selected_item` were both `lst_004`.
 
-**Being upfront:** Claude also drafted criteria 3–5 and the reasons in
-`criteria.md`. I read them and kept them because they match how my tools work:
-the plain-code paths are 5 of 5 and the model-dependent ones are 4 of 5.
+**Moment 3: writing the criteria**
+
+- *What I asked for:* Claude first drafted criteria 3–5 for me. I didn't
+  understand them, and at first I thought "5 of 5" meant the number of search
+  results, so I asked it to explain how to write a criterion.
+- *What came back:* "X of 5" means running the same test five times and
+  counting passes, and a criterion is a yes/no check plus how many of five must
+  pass (5 for plain code, usually 4 when the model writes the output).
+- *What I changed:* I replaced all three drafts with my own picks: the fit card
+  names the platform (4 of 5); the outfit mentions the item search found
+  (4 of 5); an empty wardrobe still gets advice (5 of 5).
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 

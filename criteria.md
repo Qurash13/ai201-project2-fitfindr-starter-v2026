@@ -46,56 +46,48 @@ would be a real bug in my code, not bad luck. That's why it has to be 5 of 5.
 
 ---
 
-## 3. The item search found is the item the next two tools receive
+## 3. The outfit is about the item search found
 
-On a matching query, the listing that reaches `suggest_outfit` and
-`create_fit_card` has the same `id` as `session["search_results"][0]` and
-`session["selected_item"]`, and the user is never asked to type the item
-again — in 5 of 5 tries.
+On a matching query, the outfit suggestion mentions the item in
+`session["selected_item"]`: a word from its title (like "jacket" for "90s Track
+Jacket") appears in the suggestion, in at least 4 of 5 tries.
 
 **Why this target:**
-Passing the item along is pure code: the loop reads `selected_item` out of the
-session and hands it to the next tool. There is no model involved in that step,
-so the ids either match every time or my session handling is broken. I'm
-checking the `id` rather than the title because two listings could share
-similar titles, but ids are unique.
-
-
+The loop passes the item from the search to `suggest_outfit` through the
+session, so the user never types it again. If the wrong item or nothing got
+passed, the outfit would talk about something else, and this check would catch
+it. The model writes the outfit text, though, so it might say "this piece"
+instead of the item's name even when the right item arrived. One miss out of 5
+gives it room for that.
 
 ---
 
-## 4. The fit card is a postable caption with the facts right
+## 4. The fit card names the platform
 
-For 5 different matching items, each fit card is 2–4 sentences, contains the
-item's exact price (e.g. `$24`) and its platform name, and never contains the
-words `None` or `null` — at least 4 of 5 cards pass all four checks.
+For 5 different items, the fit card names the item's platform (depop, thredUp
+or poshmark), in at least 4 of 5 tries.
 
 **Why this target:**
-The caption comes from the model, so its wording changes every run and I can't
-control it fully. I can put the price and platform in the prompt, but the model
-may still leave one out or run long, so I allow one miss. The `None` check is
-there because 32 of the 40 listings have no brand: if my prompt fills in a
-missing brand, the caption would say "None", and I want to catch that.
-
-
+The caption is written by the model, so it comes out different every time and
+might leave the platform out even though I put it in the prompt. One miss out
+of 5 gives it room for that. If it missed more than once, the caption isn't
+doing its job.
 
 ---
 
-## 5. Search respects the size and price the user asked for
+## 5. An empty wardrobe still gets outfit advice
 
-For 5 queries that include a size and/or a price ceiling, every listing in
-`session["search_results"]` costs no more than the ceiling and has the
-requested size as a whole size token (or is One Size) — 5 of 5 queries, with
-zero wrong listings across all of them.
+On a matching query with an empty wardrobe (`--empty-wardrobe`), the agent
+returns an outfit suggestion that is not blank and does not crash, in 5 of 5
+tries.
 
 **Why this target:**
-The sizes in the data come in four different formats (`S/M`, `W30 L30`,
-`US 9`, `One Size`), and a simple substring test returns shoes when someone asks
-for a small (`"s" in "us 9"`). This filter is deterministic code, so one wrong
-listing is a bug I can find and fix, not model randomness. A user who asked for
-"under $30" and sees a $45 item stops trusting every other result.
-
-
+The model writes the advice, but my code decides what happens with an empty
+wardrobe: `suggest_outfit` checks for no items before calling the model, asks
+for general styling advice instead, and returns a backup sentence if the model
+sends back nothing. Crashing and coming back blank are both ruled out by plain
+code, not by the model, so any miss would be a bug I can fix. That's why it's
+5 of 5 and not 4.
 
 ---
 

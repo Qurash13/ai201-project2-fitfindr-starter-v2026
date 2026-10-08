@@ -229,6 +229,20 @@ Nothing beats the effortless look of a broken-in medium wash, especially when pa
   names the platform (4 of 5); the outfit mentions the item search found
   (4 of 5); an empty wardrobe still gets advice (5 of 5).
 
+**Moment 4 (unit 4): diagnosing a run where everything passed**
+
+- *What I asked for:* I asked Claude to run my test, score each try against my
+  criteria exactly as written, and diagnose every miss.
+- *What came back:* Every criterion was 5/5. Instead of stopping there, it
+  read all 40 fit cards and found 32 written as if I were selling the item
+  ("on my depop", "grab this before it's gone"). It traced that to my prompt
+  never saying who was posting.
+- *What I changed:* I treated that as my one improvement. I rewrote the
+  `create_fit_card` prompt so the poster is the buyer, re-ran the whole test,
+  and seller-voice cards went from 32/40 to 0/40. I also revised criterion 3
+  (original kept), because "any title word" could pass even if the wrong item
+  got passed along.
+
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
      Don't fill these in during unit 3.
@@ -471,37 +485,99 @@ call starts the server process again.
 
      `python run_eval.py --label after` -->
 
-**What I changed:**
+**What I changed:** One prompt, in `tools.py::create_fit_card`. The old
+prompt started "Write a caption for a social media post about this thrift find".
+The new one says "You just BOUGHT this secondhand item and you're posting an
+outfit photo wearing it", asks for first person as the buyer, and says it is
+NOT selling it (no "my depop", "grab it", "shop it", "available" or "listed").
+It now asks it to say *where I found it* and *what I paid*, instead of just
+"mention the price and the platform". Nothing else changed: same tools, same
+loop, same scenarios, same temperature (0.9), caching off.
 
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:** The one my diagnosis found: 32 of 40 fit
+cards in my before run were written in a seller's voice, because my prompt
+never said who was posting.
 
 ### Run Log — After
 
+My after run is `results/run_2026-10-08_0155_after.md`, produced by `run_eval.py::main` with the same
+scenarios, 5 tries each, caching off (80 model calls).
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops before `suggest_outfit` | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Outfit mentions the item search found | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3 (revised). Same id in search → `selected_item` → `suggest_outfit` | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card names the platform (5 different items) | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Empty wardrobe still gets outfit advice | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
+And the number the change was aimed at:
 
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
+| | Before | After |
+|---|---|---|
+| Fit cards flagged as seller voice by my phrase check | **32 of 40** | **3 of 40** |
+| …that are actually seller voice when I read them | 32 of 40 | **0 of 40** |
+| Fit cards naming the right platform (criterion 4, all tries) | 25 of 25 | 25 of 25 |
 
+The 3 "after" flags are all false alarms from my check matching "my closet",
+which a buyer says too ("the ultimate vintage find for my closet"). I checked
+the before run for the same thing, and none of its 32 were flagged only by
+"my closet". All 32 had real seller phrases like "on my depop" or "grab this".
 
+Two real after cards, from the same items as the seller-voice examples above:
+
+```
+I scored this dreamy floral silk slip dress on depop for just $30 and I am completely obsessed with the 90s model-off-duty vibe. Layering my oversized grey crewneck right over top with chunky sneakers makes it the ultimate effortless daytime look. I cannot wait to wear this absolute steal on repeat all season long!
+```
+
+```
+I am obsessed with this vintage Wrangler cropped denim jacket that I found on Poshmark for just $42. I styled it over a black midi dress with chunky sneakers to get that effortless contrast between feminine and casual. It gives off the ultimate streetwear vibe while keeping things super comfortable for everyday wear.
+```
+
+**Did it help, and how do I know:** Yes. Seller-voice fit cards went from 32 of
+40 to 0 of 40 on reading, with the same 8 items and the same number of tries.
+Nothing I was already passing broke: all five criteria are still 5/5, and every
+card still names the right platform. Every after card I read starts with what
+I did ("Scored", "Found", "Just thrifted") instead of telling someone to buy
+it.
 
 ---
 
 ## What's Still Broken
 
-<!-- For each criterion still missed: what you'd do, and why you stopped where
-     you did. "I ran out of time" is fine if it's true. Pretending nothing is
-     left is not. -->
+None of my five criteria are missed, so nothing here is a missed target.
+These are the problems I found while reading the output that my criteria don't
+cover, and what I'd do about each.
 
-
-
+- **My criteria 3 and 4 were too easy, and 4 still is.** Criterion 4 passed
+  25/25 even while 80% of the cards were in the wrong voice, so it measured
+  something the prompt hands to the model. If I wrote it again, it would be
+  "names the platform *and* is written as the buyer". I left it as written
+  because it isn't broken, just low, and the rules say not to change a
+  criterion just because I'd like a different one.
+- **My search matches any keyword, not the kind of item.** `leather boots`
+  returns a **Leather Belt** first, because "leather" matches and there are no
+  boots in the data. My agent then styles a belt for someone who asked for
+  boots. I'd fix it in `tools.py::search_listings` by requiring the item word
+  (boots, jacket, tee) to match the title or category, and returning `[]`
+  otherwise so my empty-search branch handles it. I stopped because the rules
+  allow only one improvement this unit.
+- **A data mistake leaks into the outfit text.** The silk slip dress (lst_013)
+  has `category: "bottoms"` in `listings.json`, and in one try `suggest_outfit`
+  wrote "Since it is listed under bottoms, wait—even if it is a dress…". The
+  tool passed the field through as-is. I'd either fix the data or leave the
+  category out of that prompt.
+- **`suggest_outfit` is still a bit salesy** ("you totally need to grab this"). It
+  reads like a friend hyping it up, not a listing, so I left it, but it's the
+  same kind of prompt gap I fixed in the fit card.
+- **My seller-voice check is just a phrase list.** It flagged 3 buyer cards
+  because of "my closet". It was good enough to show a 32 → 0 change I could
+  confirm by reading, but a better check would need someone (or a model) to
+  judge the voice.
+- **Each MCP search restarts the server**, which adds about a second per run.
+  Fine for one user. I'd keep a connection open if this were serving lots of
+  people.
 <!-- ═════════════════════════════════════════════════════════════════════
 
      SUBMISSION CHECKLIST — unit 3

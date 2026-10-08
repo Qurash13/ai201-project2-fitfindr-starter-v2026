@@ -25,11 +25,12 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-My search is a plain keyword match, not a model, so a query phrased with words
-that aren't in a listing ("crewneck" when the listing says "tee") can miss even
-though a matching item exists. The two model calls can also fail on a given try
-(rate limit or a bad response). One miss in five allows for that. Anything below
-4 would mean the normal path is unreliable, which is the one thing a user sees.
+I picked 4 of 5 because my search is a plain keyword match, not a model. If I
+use a word that isn't in a listing (like "crewneck" when the listing says "tee"),
+it can miss even though a matching item exists. My two model calls can also
+fail on a try, for example if I hit the rate limit. I allow one miss for that.
+I didn't go lower than 4 because this is the path I use most, and it has to
+work.
 
 ---
 
@@ -39,10 +40,11 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-This path never touches the model. `search_listings` is plain Python over a fixed
-file, so the same impossible query returns `[]` every time, and the branch in
-`run_agent` is an `if` on that list. Nothing in it is random, so a single failure
-would be a real bug in my code, not bad luck. That's why it has to be 5 of 5.
+I picked 5 of 5 because this path never uses the model. My `search_listings`
+is plain Python reading a fixed file, so the same impossible query gives me `[]`
+every time, and my branch in `run_agent` is just an `if` on that list. Nothing
+here is random, so if it fails even once, that's a bug in my code, not bad
+luck.
 
 ---
 
@@ -53,12 +55,12 @@ On a matching query, the outfit suggestion mentions the item in
 Jacket") appears in the suggestion, in at least 4 of 5 tries.
 
 **Why this target:**
-The loop passes the item from the search to `suggest_outfit` through the
-session, so the user never types it again. If the wrong item or nothing got
-passed, the outfit would talk about something else, and this check would catch
-it. The model writes the outfit text, though, so it might say "this piece"
-instead of the item's name even when the right item arrived. One miss out of 5
-gives it room for that.
+My loop passes the item from the search to `suggest_outfit` through the
+session, so I never have to type it again. If the wrong item or nothing got
+passed, the outfit would talk about something else, and I'd catch that with
+this check. I picked 4 of 5 because the model writes the outfit text, so it
+might say "this piece" instead of the item's name even when the right item
+arrived. I allow one miss for that.
 
 ---
 
@@ -68,10 +70,10 @@ For 5 different items, the fit card names the item's platform (depop, thredUp
 or poshmark), in at least 4 of 5 tries.
 
 **Why this target:**
-The caption is written by the model, so it comes out different every time and
-might leave the platform out even though I put it in the prompt. One miss out
-of 5 gives it room for that. If it missed more than once, the caption isn't
-doing its job.
+I picked 4 of 5 because the model writes the caption, so it comes out
+different every time and might leave the platform out even though I put it in
+my prompt. I allow one miss for that. If it missed more than once, I'd say my
+caption isn't doing its job.
 
 ---
 
@@ -82,12 +84,12 @@ returns an outfit suggestion that is not blank and does not crash, in 5 of 5
 tries.
 
 **Why this target:**
-The model writes the advice, but my code decides what happens with an empty
-wardrobe: `suggest_outfit` checks for no items before calling the model, asks
-for general styling advice instead, and returns a backup sentence if the model
-sends back nothing. Crashing and coming back blank are both ruled out by plain
-code, not by the model, so any miss would be a bug I can fix. That's why it's
-5 of 5 and not 4.
+I picked 5 of 5 even though the model writes the advice, because my code
+decides what happens with an empty wardrobe. My `suggest_outfit` checks for no
+items before calling the model, asks for general styling advice instead, and
+returns a backup sentence if the model sends back nothing. Crashing and coming
+back blank are both stopped by my own code, not by the model, so any miss would
+be a bug I can fix.
 
 ---
 

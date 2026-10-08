@@ -39,13 +39,13 @@
 
 ## What This Does
 
-FitFindr helps someone shop secondhand. You type what you're looking for in
-plain language, like `vintage graphic tee under $30` or `90s track jacket in
-size M`. It searches 40 thrift listings from Depop, thredUp and Poshmark for the
-best match within your size and price. Then it suggests one or two outfits that
-pair the find with clothes already in your wardrobe, and writes a short caption
-you could post about it. If nothing matches, it stops and tells you what to
-loosen: the price, the size, or the wording.
+I built FitFindr to help with secondhand shopping. I type what I'm looking for
+in plain language, like `vintage graphic tee under $30` or `90s track jacket in
+size M`. My agent searches 40 thrift listings from Depop, thredUp and Poshmark
+for the best match in my size and price. Then it suggests one or two outfits
+that pair the find with clothes already in my wardrobe, and writes a short
+caption I could post about it. If nothing matches, it stops and tells me what to
+change: the price, the size, or the words I used.
 
 ---
 
@@ -63,18 +63,18 @@ loosen: the price, the size, or the wording.
 
 ### `search_listings`
 
-- **What it does:** Searches the 40 listings in `data/listings.json`. It drops any listing over the price ceiling or in the wrong size. It scores the rest by how many words from the description appear in each listing's title, description, style tags, category and colors, and drops anything that scores zero. No model call.
+- **What it does:** My search goes through the 40 listings in `data/listings.json`. It drops any listing over the price ceiling or in the wrong size. It scores the rest by how many words from the description appear in each listing's title, description, style tags, category and colors, and drops anything that scores zero. No model call.
 - **Inputs:** `description` (str): keywords like `"vintage graphic tee"`. `size` (str or None): a size like `"M"`, or None to skip the size filter. `max_price` (float or None): highest price allowed, inclusive, or None to skip the price filter.
 - **Returns:** A `list[dict]` of up to 10 listing dicts (`config.SEARCH_RESULT_LIMIT`), best match first. Each dict is a full listing with `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand` (often None) and `platform`.
-  **Size rule:** the listing's size is split on `/`, spaces and parentheses into whole tokens, and the requested size has to equal one of those tokens, ignoring case. So `"M"` matches `S/M` and `M/L`, but `"S"` does not match `US 9` or `XL (oversized)`, and `"L"` does not match `XL`. Listings sized `One Size` match any size.
+  **Size rule (my decision):** the listing's size is split on `/`, spaces and parentheses into whole tokens, and the requested size has to equal one of those tokens, ignoring case. So `"M"` matches `S/M` and `M/L`, but `"S"` does not match `US 9` or `XL (oversized)`, and `"L"` does not match `XL`. I decided listings sized `One Size` match any size, because they're meant to fit everyone.
 - **When it has nothing:** Returns an empty list `[]`. It never returns None and never raises an exception.
 
 ### `suggest_outfit`
 
-- **What it does:** Asks the model for one or two outfits built around the new item. When the wardrobe has items, the outfits name pieces the user already owns.
+- **What it does:** Asks the model for one or two outfits built around the new item. When the wardrobe has items, the outfits name pieces I already own.
 - **Inputs:** `new_item` (dict): one listing dict, the item found by search. `wardrobe` (dict): a dict with an `items` key holding a list of wardrobe item dicts (`name`, `category`, `colors`, `style_tags`, `notes`). The list may be empty.
 - **Returns:** A non-empty `str` of outfit suggestions in plain text. With a wardrobe, each outfit names specific wardrobe pieces by their `name`.
-- **When it has nothing:** If `wardrobe["items"]` is empty, it returns general styling advice for the item (what kinds of pieces and colors go with it) instead of raising or returning `""`.
+- **When it has nothing:** I decided that if `wardrobe["items"]` is empty, it returns general styling advice for the item (what kinds of pieces and colors go with it) instead of raising or returning `""`.
 
 ### `create_fit_card`
 
@@ -98,19 +98,20 @@ loosen: the price, the size, or the wording.
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:** If `search_listings` returns an empty list, put a message in
-`session["error"]` that says what was searched for and what to change (raise the
-price limit, drop the size, or use broader words), and stop. `suggest_outfit`
-and `create_fit_card` are never called. Otherwise, put the first result in
-`session["selected_item"]` and go to `suggest_outfit`, then `create_fit_card`.
+**Branch rule:** If `search_listings` returns an empty list, my loop puts a
+message in `session["error"]` that says what I searched for and what to change
+(raise the price limit, drop the size, or use broader words), and stops.
+`suggest_outfit` and `create_fit_card` are never called. Otherwise, my loop puts
+the first result in `session["selected_item"]` and goes to `suggest_outfit`,
+then `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-The loop is a `while` loop over a `next_step` value (`"search"` → `"suggest"` →
-`"fit_card"` → `"done"`). After each step it looks at what that step put in the
-session to choose the next one. `trace.check_iterations()` runs on every pass.
+My loop is a `while` loop over a `next_step` value (`"search"` → `"suggest"` →
+`"fit_card"` → `"done"`). After each step, it looks at what that step put in the
+session to choose the next one. I call `trace.check_iterations()` on every pass.
 
-**How the query is parsed:** Regex, in `agent.py::parse_query`. One pattern
+**How the query is parsed:** I used regex, in `agent.py::parse_query`. One pattern
 finds a price ceiling (`under $30`, `$40`). Another finds a size (`size M`,
 `in size M`, `size 8`, `size US 8`, `in an S`). Each is cut out of the query,
 and whatever words are left become the search description. For example,
@@ -118,7 +119,7 @@ and whatever words are left become the search description. For example,
 `{"description": "designer ballgown", "size": "XXS", "max_price": 5.0}`.
 
 **What moves through the session:**
-1. `query`: what the user typed
+1. `query`: what I typed
 2. `parsed`: description, size and max_price from `parse_query`
 3. `search_results`: everything `search_listings` returned
 4. `selected_item`: `search_results[0]`, read back out of the session and passed to `suggest_outfit`
@@ -208,13 +209,13 @@ Nothing beats the effortless look of a broken-in medium wash, especially when pa
 
 - *What I asked for:* I asked Claude to run `app.py fields` and `app.py listings` and explain the data. Then I said I didn't understand the warning about sizes.
 - *What came back:* A table using real sizes from the file. It showed that checking whether `"s"` appears in the size string matches `US 9` (a shoe), `One Size` and `XL (oversized)`, so a search for a small tee would return shoes and an XL shirt.
-- *What I changed:* I chose whole-token size matching (split `S/M` into `S` and `M`, then compare whole pieces). I also decided `One Size` items match any size. That rule went into the Tool Inventory before any code, and it became criterion 5.
+- *What I changed:* I chose whole-token size matching (split `S/M` into `S` and `M`, then compare whole pieces). I also decided `One Size` items match any size. I wrote that rule into my Tool Inventory before any code existed, and my `search_listings` follows it.
 
 **Moment 2**
 
-- *What I asked for:* I was running behind, so I asked Claude to build the tools and the loop from my Tool Inventory and run each one from the terminal.
+- *What I asked for:* I was running behind, so I asked Claude to build my tools and my loop from my Tool Inventory and run each one from the terminal.
 - *What came back:* The first version of `parse_query` turned `90s track jacket in size M` into the description `90s track jacket in`. It removed `size M` but left the word "in" behind.
-- *What I changed:* The size pattern now also removes an optional `in` before `size`, so the description comes out as `90s track jacket`. I also checked that the session carried the item through: the search's first result and `selected_item` were both `lst_004`.
+- *What I changed:* I had the size pattern also remove an optional `in` before `size`, so the description now comes out as `90s track jacket`. I also checked that the session carried the item through: the search's first result and `selected_item` were both `lst_004`.
 
 **Moment 3: writing the criteria**
 

@@ -263,13 +263,16 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         return "Can't write a fit card without an outfit suggestion."
 
     prompt = (
-        f"Write a caption for a social media post about this thrift find:\n"
+        f"You just BOUGHT this secondhand item and you're posting an outfit photo "
+        f"wearing it. Write the caption for your post.\n"
         f"{_describe_item(new_item)}\n\n"
-        f"How it's being styled:\n{outfit}\n\n"
+        f"How you're styling it:\n{outfit}\n\n"
         "Rules:\n"
-        "- 2 to 4 sentences, written like a real person posting, not a product listing.\n"
-        f"- Mention the price as ${new_item['price']:g} exactly once and the platform "
-        f"({new_item['platform']}) exactly once.\n"
+        "- 2 to 4 sentences, in first person, as the buyer showing off a find.\n"
+        "- You are NOT selling it. Never say 'my depop/poshmark/thredUp', 'grab it', "
+        "'shop it', 'available', 'listed' or anything that invites people to buy it.\n"
+        f"- Say you found it on {new_item['platform']} and paid ${new_item['price']:g}, "
+        f"each exactly once.\n"
         "- Say something specific about the vibe of the outfit.\n"
         "- No hashtags and no quotation marks around the caption."
     )

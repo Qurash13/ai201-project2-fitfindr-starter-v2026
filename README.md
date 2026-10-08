@@ -39,9 +39,13 @@
 
 ## What This Does
 
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
-
-
+FitFindr helps someone shop secondhand. You type what you're looking for in
+plain language, like `vintage graphic tee under $30` or `90s track jacket in
+size M`. It searches 40 thrift listings from Depop, thredUp and Poshmark for the
+best match within your size and price. Then it suggests one or two outfits that
+pair the find with clothes already in your wardrobe, and writes a short caption
+you could post about it. If nothing matches, it stops and tells you what to
+loosen: the price, the size, or the wording.
 
 ---
 
@@ -94,13 +98,33 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, put a message in
+`session["error"]` that says what was searched for and what to change (raise the
+price limit, drop the size, or use broader words), and stop. `suggest_outfit`
+and `create_fit_card` are never called. Otherwise, put the first result in
+`session["selected_item"]` and go to `suggest_outfit`, then `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+The loop is a `while` loop over a `next_step` value (`"search"` → `"suggest"` →
+`"fit_card"` → `"done"`). After each step it looks at what that step put in the
+session to choose the next one. `trace.check_iterations()` runs on every pass.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**How the query is parsed:** Regex, in `agent.py::parse_query`. One pattern
+finds a price ceiling (`under $30`, `$40`). Another finds a size (`size M`,
+`in size M`, `size 8`, `size US 8`, `in an S`). Each is cut out of the query,
+and whatever words are left become the search description. For example,
+`designer ballgown size XXS under $5` becomes
+`{"description": "designer ballgown", "size": "XXS", "max_price": 5.0}`.
+
+**What moves through the session:**
+1. `query`: what the user typed
+2. `parsed`: description, size and max_price from `parse_query`
+3. `search_results`: everything `search_listings` returned
+4. `selected_item`: `search_results[0]`, read back out of the session and passed to `suggest_outfit`
+5. `outfit_suggestion`: what `suggest_outfit` returned, read back out and passed to `create_fit_card` along with `selected_item`
+6. `fit_card`: the caption
+7. `error`: set only when the run stopped early. In that case 4–6 stay `None`.
 
 ---
 
@@ -114,25 +138,59 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   Hey there! That Y2K baby tee is such a cute find, especially with the pink and purple butterfly print, and eighteen bucks is a total steal for Depop. It is going to look amazing in your closet! 
+
+For your first outfit, pair the tee with your baggy straight-leg jeans, throw on the black cropped zip hoodie just in case it gets chilly, and finish it off with your chunky white sneakers for the ultimate nostalgic vibe. 
+
+For look number two, tuck the baby tee into your wide-leg khaki trousers, add the brown leather belt to pull it together, and wear your black combat boots to add a cool, edgy contrast to the sweet cottagecore print. Have so much fun styling it!
+
+  Fit card: Just scored this dreamy butterfly baby tee and I am obsessed with the pink and purple print. It’s up on my depop right now for just $18, and you can totally style it with baggy denim and chunky sneakers for that ultimate Y2K nostalgia. Grab it before it's gone and get ready to live out all your best 2000s fashion fantasies!
+
+0 model calls this session, 2 served from cache
+```
+
+And the empty-search branch, which stops before `suggest_outfit`:
+
+```
+$ python app.py ask 'designer ballgown size XXS under $5'
+
+  Nothing matched 'designer ballgown' in size XXS under $5. Try: raise your price limit (listings start around $12); or drop the size; or use broader words like 'jacket', 'tee' or 'jeans'.
+
+0 model calls this session
 ```
 
 **The three tools, tested one at a time**
 
 ```
-$ python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
+$ python -c "from tools import search_listings; r = search_listings('graphic tee', max_price=30); print(len(r), 'results'); [print(l['id'], l['title'], l['size'], l['price'], l['platform']) for l in r]"
+6 results
+lst_002 Y2K Baby Tee — Butterfly Print S/M 18.0 depop
+lst_006 Graphic Tee — 2003 Tour Bootleg Style L 24.0 depop
+lst_033 Vintage Band Tee — Faded Grey L 19.0 depop
+lst_015 Vintage Graphic Hoodie — Faded Black L 26.0 depop
+lst_017 Mesh Long-Sleeve Top — Black S/M 15.0 depop
+lst_011 Low-Rise Cargo Pants — Khaki W29 27.0 poshmark
 
+$ python -c "from tools import search_listings; print(search_listings('designer ballgown', size='XXS', max_price=5))"
+[]
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
+Hey there! These vintage 501s are an absolute thrift store holy grail, and that medium wash is going to be so versatile in your closet. 
 
+Outfit one: Keep it effortlessly cool and casual by pairing the new jeans with your white ribbed tank top, layered under the oversized grey crewneck sweatshirt. Add the chunky white sneakers and the black crossbody bag for a comfy, classic 90s streetwear vibe. 
+
+Outfit two: Let's lean into that vintage edge! Tuck the white ribbed tank top into the 501s, cinch them with your brown leather belt, and throw on the vintage black denim jacket. Finish this look off with your black combat boots for an effortlessly cool, tough-girl aesthetic. You will wear these constantly!
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
-
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
+Nothing beats the effortless look of a broken-in medium wash, especially when paired with crisp white sneakers for that ultimate effortless streetwear vibe. These vintage Levi's 501s have the absolute best classic fit and are ready for a new home. Grab them for just $38 over on my depop before someone else snags them.
 ```
 
 ---
@@ -148,15 +206,19 @@ $ python -c "from tools import create_fit_card; ..."
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I asked Claude to run `app.py fields` and `app.py listings` and explain the data. Then I said I didn't understand the warning about sizes.
+- *What came back:* A table using real sizes from the file. It showed that checking whether `"s"` appears in the size string matches `US 9` (a shoe), `One Size` and `XL (oversized)`, so a search for a small tee would return shoes and an XL shirt.
+- *What I changed:* I chose whole-token size matching (split `S/M` into `S` and `M`, then compare whole pieces). I also decided `One Size` items match any size. That rule went into the Tool Inventory before any code, and it became criterion 5.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I was running behind, so I asked Claude to build the tools and the loop from my Tool Inventory and run each one from the terminal.
+- *What came back:* The first version of `parse_query` turned `90s track jacket in size M` into the description `90s track jacket in`. It removed `size M` but left the word "in" behind.
+- *What I changed:* The size pattern now also removes an optional `in` before `size`, so the description comes out as `90s track jacket`. I also checked that the session carried the item through: the search's first result and `selected_item` were both `lst_004`.
+
+**Being upfront:** Claude also drafted criteria 3–5 and the reasons in
+`criteria.md`. I read them and kept them because they match how my tools work:
+the plain-code paths are 5 of 5 and the model-dependent ones are 4 of 5.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 

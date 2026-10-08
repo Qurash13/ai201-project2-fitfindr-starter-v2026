@@ -247,19 +247,63 @@ Nothing beats the effortless look of a broken-in medium wash, especially when pa
      `python run_eval.py --label before` runs everything and writes the table
      into results/. Paste it here and fill in the verdicts. -->
 
+My before run is `results/run_2026-10-08_0149_before.md`, produced by `run_eval.py::main` running
+`agent.py::run_agent` 5 times per scenario with caching off (80 model calls).
+
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops before `suggest_outfit` | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Outfit mentions the item search found | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card names the platform (5 different items) | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Empty wardrobe still gets outfit advice | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Real output from one try**, pasted as text, naming the file and function
-that produced it:
+For criterion 4, my criterion says "5 different items", so I ran five scenarios
+that each land on a different listing (lst_002, lst_004, lst_003, lst_005,
+lst_019, across depop, poshmark and thredUp). Try *k* in my table is try 1 of
+item *k*. I also ran every item 5 times, and all 25 of those cards named the
+right platform too.
+
+**Real output from one try of each**, from `results/` (written by
+`run_eval.py::main`, produced by `agent.py::run_agent`):
+
+Criterion 1, `vintage graphic tee under $30`, try 1. All three tools ran:
 
 ```
+- stopped early: no
+- selected_item: Y2K Baby Tee — Butterfly Print ($18.0, depop)
+Fit card: Obsessed with this nostalgic butterfly baby tee and I can not believe it is only $18 on my depop right now! It gives the ultimate 2000s pop star off-duty energy when you style it with baggy dark wash jeans and a cropped hoodie. If you want to lean into a softer cottagecore vibe instead, just tuck it into khaki trousers with combat boots for the cutest contrast.
+```
 
+Criterion 2, `designer ballgown size XXS under $5`, try 1. It stopped with no outfit or fit card:
+
+```
+- stopped early: yes — Nothing matched 'designer ballgown' in size XXS under $5. Try: raise your price limit (listings start around $12); or drop the size; or use broader words like 'jacket', 'tee' or 'jeans'.
+- selected_item: (none)
+- search_results: 0
+```
+
+Criterion 3, `silk slip dress under $40`, try 1. "silk slip dress" from the title is in the outfit:
+
+```
+- selected_item: 90s Silk Slip Dress — Floral, Midi Length ($30.0, depop)
+Outfit suggestion: Hey friend! Oh, you totally need to grab that 90s silk slip dress. It is such a versatile piece! Since it is listed under bottoms, wait—even if it is a dress, we can totally style it like a dreamy skirt or layer it up. 
+```
+
+Criterion 4, item 3 (`oversized flannel shirt`), try 1. "thredUp" is in the card:
+
+```
+- selected_item: Oversized Flannel Shirt — Plaid Red/Black ($22.0, thredUp)
+Fit card: Score this vintage Woolrich red and black flannel on thredUp for just $22 and instantly nail that effortless, slouchy streetwear vibe. Layer it over a grey crewneck with wide-leg khakis and chunky sneakers for the ultimate cozy fit, or tie it around your waist with combat boots for a total grunge throwback. Trust me, you will live in this oversized XL piece all season long!
+```
+
+Criterion 5, `denim jacket under $50` with an empty wardrobe, try 1. It gave advice, with no crash:
+
+```
+- selected_item: Denim Jacket — Light Wash, Cropped ($42.0, poshmark)
+Outfit suggestion: (You haven't saved any clothes yet, so these are general ideas. Add your wardrobe to get outfits built from what you own.)
+
+Hey there! You are going to get so much wear out of this Wrangler jacket. Since it's a cropped light wash, it has that effortless vintage cool factor. 
 ```
 
 ---
@@ -284,15 +328,57 @@ that produced it:
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Matching query completes all three tools | 4 of 5 | MET (5/5) | Every try had `stopped early: no` plus an outfit and a fit card in the log |
+| 2 | Impossible query stops before `suggest_outfit` | 5 of 5 | MET (5/5) | Every try stopped after step 2 of the trace, with no outfit or fit card, and the message has a "Try:" list of what to change |
+| 3 | Outfit mentions the item search found | 4 of 5 | MET (5/5) | I checked each outfit for a word from the selected item's title. Every try had several ("silk", "slip", "dress") |
+| 4 | Fit card names the platform | 4 of 5 | MET (5/5) | I checked each card for the item's platform name, ignoring capitals. 5/5 items, and 25/25 across all tries |
+| 5 | Empty wardrobe still gets advice | 5 of 5 | MET (5/5) | All 5 tries returned a non-blank outfit suggestion, and none crashed |
 
 **Diagnoses**
 
+I missed nothing. Every criterion was met on every try. I don't think that
+means my agent is perfect. I think some of my targets were too easy, and
+reading the actual output showed me a real problem none of them catch.
 
+**Were my targets low?** Yes, for 3 and 4.
+
+- **Criterion 4** checks for the platform name, but my `create_fit_card` prompt
+  literally tells the model to mention the platform. So it was almost
+  guaranteed to pass, and it did, 25 of 25.
+- **Criterion 3** is supposed to test the session, but it checks the model's
+  text, and *any* title word counts, including generic ones like "90s" or
+  "vintage". If my loop had passed the wrong 90s item to `suggest_outfit`, the
+  outfit would still mention "90s" and the try would pass. So it can pass
+  during exactly the state failure it's meant to catch. I revised it in
+  `criteria.md` (original kept, revision underneath). The revised version
+  compares ids in the trace: search's first result, `selected_item`, and the
+  item `suggest_outfit` received. Scored from my before traces, it's still
+  5/5 on criterion 3's scenario, and on every other scenario that reached
+  `suggest_outfit`.
+
+**The real failure my criteria missed: fit cards written as the seller.**
+When I read the 40 fit cards from my before run, **32 of 40 (80%)** read like a
+*seller's listing*, not a buyer showing off a find:
+
+> "I can not believe it is only $18 **on my depop right now**!"
+> "**Grab this** dreamy vintage find **over on my depop** for just $30 **before it is gone**!"
+> "**Grab this** classic staple **over on my Poshmark closet** for just $42 before someone else snags it!"
+
+- **Where:** the model's output, in `tools.py::create_fit_card`. The tool ran
+  fine and the loop and session were fine.
+- **Mechanism:** my prompt said "Write a caption for a social media post about
+  this thrift find" and told it to mention the price and the platform, but it
+  **never said who is posting**. A caption that names a price and "depop" looks
+  exactly like a Depop listing, so the model filled the gap with the most
+  common kind of post that has those details: someone selling it.
+- **Pattern:** the same push shows up in `suggest_outfit` ("you totally need to
+  grab this…"), but there it reads like a friend hyping it up, not a listing.
+  So I treated it as one problem in the fit card prompt.
+
+I counted "seller voice" as any card containing phrases like "my depop",
+"my Poshmark closet", "grab it/this", "before it's gone", "listed" or
+"available". I wrote that check while reading the cards, before I changed
+anything.
 
 ---
 
@@ -308,22 +394,71 @@ that produced it:
      the same length, your branch isn't working — and this is the fastest way
      anyone will ever find that out. -->
 
-**Happy path**
+Printed with `python app.py ask '...' --trace`. The `trace.step()` calls are in
+`agent.py::run_agent`, one per step. Step 2 is the MCP call.
+
+**Happy path** (`vintage graphic tee under $30`, 4 steps):
 
 ```
-
+[1] parse_query
+      in:  'vintage graphic tee under $30'
+      out: description='vintage graphic tee', size=None, max_price=30.0
+[2] search_listings (via MCP)
+      in:  description='vintage graphic tee', size=None, max_price=30.0
+      out: lst_002, lst_006, lst_033, lst_015, lst_003, lst_012, lst_013, lst_014, lst_016, lst_017
+      →    branch: 10 found, selected lst_002
+[3] suggest_outfit
+      in:  new_item=lst_002 (Y2K Baby Tee — Butterfly Print), wardrobe=10 items
+      out: Hey there! Oh, you totally need to grab this Y2K baby tee. At eighteen dollars in excellent condition, it is a…
+[4] create_fit_card
+      in:  new_item=lst_002, outfit='Hey there! Oh, you totally need to grab '…
+      out: Obsessed with this nostalgic butterfly baby tee and I can not believe it is only $18 on my depop right now! It…
 ```
 
-**Empty search**
+**Empty search** (`designer ballgown size XXS under $5`, which stops after 2 steps):
 
 ```
-
+[1] parse_query
+      in:  'designer ballgown size XXS under $5'
+      out: description='designer ballgown', size='XXS', max_price=5.0
+[2] search_listings (via MCP)
+      in:  description='designer ballgown', size='XXS', max_price=5.0
+      out: [] (empty)
+      →    branch: empty, stopping before suggest_outfit
 ```
 
-**On the MCP move:** <!-- what changed in your code, and whether anything
-behaved differently afterwards. If the rewire didn't work, say exactly where it
-broke — the error text and the last thing that worked. That earns the point in
-full. -->
+**The three failure modes, triggered on purpose:**
+
+| Failure | How I triggered it | What my agent said |
+|---|---|---|
+| Empty search | `python app.py ask 'designer ballgown size XXS under $5'` | Nothing matched 'designer ballgown' in size XXS under $5. Try: raise your price limit (listings start around $12); or drop the size; or use broader words like 'jacket', 'tee' or 'jeans'. |
+| Empty wardrobe | `python app.py ask 'denim jacket under $50' --empty-wardrobe` | (You haven't saved any clothes yet, so these are general ideas. Add your wardrobe to get outfits built from what you own.) …then real styling advice for the jacket |
+| Model unavailable | Ran `'90s track jacket in size M'` with a broken key and the cache off | Found a match, but couldn't get outfit ideas because the model couldn't be reached. The model rejected your API key. Check GEMINI_API_KEY in your .env file, or create a fresh key at aistudio.google.com. Then run the same search again. |
+
+The model-unavailable trace stops at step 3 instead of crashing:
+
+```
+[3] suggest_outfit
+      in:  lst_004
+      out: ModelUnavailable
+      →    model unreachable, stopping
+```
+
+Before I added handlers, a bad key would have crashed `run_agent` with a stack
+trace. I added a `ModelUnavailable` handler around both model calls, and an
+`MCPError` handler around the MCP search in case the server can't start.
+
+**On the MCP move:** I moved `search_listings` onto MCP. In `mcp_server.py`
+I registered it with `@mcp.tool()`, with typed inputs (`description: str`,
+`size: str | None`, `max_price: float | None`) and a description written for
+someone who can't see my code. It names the size rule, that prices are US
+dollars, and that an empty result is `[]`. In `agent.py::run_agent` I swapped
+the direct call for `call_tool("search_listings", {...})`. `python mcp_client.py`
+lists the tool with those three inputs. Nothing behaved differently: I ran 4
+queries both ways (including the impossible one) and the direct and MCP results
+were identical, and an empty search still comes back as a list `[]`, not
+`None` or a string. The only difference I noticed is speed, because each MCP
+call starts the server process again.
 
 
 

@@ -62,6 +62,19 @@ this check. I picked 4 of 5 because the model writes the outfit text, so it
 might say "this piece" instead of the item's name even when the right item
 arrived. I allow one miss for that.
 
+> **Revised in unit 4:** On a matching query, the trace shows the same listing
+> id three times: the first result `search_listings` returned, the
+> `selected_item`, and the `new_item` that reached `suggest_outfit`, in 5 of 5
+> tries.
+>
+> **Why revised:** My original check could pass during exactly the failure it
+> was meant to catch. Any word from the title counted, including generic ones
+> like "90s" or "vintage" that appear in many titles. If my loop had passed the
+> wrong 90s item along, the outfit would still say "90s" and the try would
+> pass. It also checks the model's writing instead of the session. Comparing
+> ids in the trace checks the state directly, and because passing the item
+> along is plain code, 5 of 5 is the right target.
+
 ---
 
 ## 4. The fit card names the platform

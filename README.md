@@ -59,24 +59,25 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Searches the 40 listings in `data/listings.json`. It drops any listing over the price ceiling or in the wrong size. It scores the rest by how many words from the description appear in each listing's title, description, style tags, category and colors, and drops anything that scores zero. No model call.
+- **Inputs:** `description` (str): keywords like `"vintage graphic tee"`. `size` (str or None): a size like `"M"`, or None to skip the size filter. `max_price` (float or None): highest price allowed, inclusive, or None to skip the price filter.
+- **Returns:** A `list[dict]` of up to 10 listing dicts (`config.SEARCH_RESULT_LIMIT`), best match first. Each dict is a full listing with `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand` (often None) and `platform`.
+  **Size rule:** the listing's size is split on `/`, spaces and parentheses into whole tokens, and the requested size has to equal one of those tokens, ignoring case. So `"M"` matches `S/M` and `M/L`, but `"S"` does not match `US 9` or `XL (oversized)`, and `"L"` does not match `XL`. Listings sized `One Size` match any size.
+- **When it has nothing:** Returns an empty list `[]`. It never returns None and never raises an exception.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model for one or two outfits built around the new item. When the wardrobe has items, the outfits name pieces the user already owns.
+- **Inputs:** `new_item` (dict): one listing dict, the item found by search. `wardrobe` (dict): a dict with an `items` key holding a list of wardrobe item dicts (`name`, `category`, `colors`, `style_tags`, `notes`). The list may be empty.
+- **Returns:** A non-empty `str` of outfit suggestions in plain text. With a wardrobe, each outfit names specific wardrobe pieces by their `name`.
+- **When it has nothing:** If `wardrobe["items"]` is empty, it returns general styling advice for the item (what kinds of pieces and colors go with it) instead of raising or returning `""`.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model for a short social-media-style caption about the find and the outfit. It should read like a real post, not a product description.
+- **Inputs:** `outfit` (str): the text `suggest_outfit` returned. `new_item` (dict): the listing dict for the item.
+- **Returns:** A `str` caption of 2–4 sentences. It names the item, mentions the price and the platform once each, and describes the vibe. It leaves the brand out when `brand` is None.
+- **When it has nothing:** If `outfit` is empty or only whitespace, it returns the message `"Can't write a fit card without an outfit suggestion."` without calling the model.
 
 ---
 

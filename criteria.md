@@ -25,9 +25,11 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
+My search is a plain keyword match, not a model, so a query phrased with words
+that aren't in a listing ("crewneck" when the listing says "tee") can miss even
+though a matching item exists. The two model calls can also fail on a given try
+(rate limit or a bad response). One miss in five allows for that. Anything below
+4 would mean the normal path is unreliable, which is the one thing a user sees.
 
 ---
 
@@ -37,64 +39,61 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
+This path never touches the model. `search_listings` is plain Python over a fixed
+file, so the same impossible query returns `[]` every time, and the branch in
+`run_agent` is an `if` on that list. Nothing in it is random, so a single failure
+would be a real bug in my code, not bad luck. That's why it has to be 5 of 5.
 
 ---
 
-## 3. Something about state
+## 3. The item search found is the item the next two tools receive
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know that the item your search found is the same item the
-     next tool received? Name something countable or observable.
-
-     This is the criterion people find hardest, because state failure doesn't
-     look like state failure — it looks like a tool problem. Something that
-     compares session["selected_item"] against what actually reached
-     suggest_outfit is the shape you're after. -->
-
-
+On a matching query, the listing that reaches `suggest_outfit` and
+`create_fit_card` has the same `id` as `session["search_results"][0]` and
+`session["selected_item"]`, and the user is never asked to type the item
+again — in 5 of 5 tries.
 
 **Why this target:**
-
-
-
----
-
-## 4. Something about the fit card
-
-<!-- YOU WRITE THIS ONE.
-
-     The fit card calls a model, so the same input can produce different words
-     each time. That's not a bug — it's the nature of the tool. So what would
-     make it acceptable?
-
-     Think about what you'd actually be unhappy to see. A caption that never
-     mentions the price? Two different items producing the same opening
-     sentence? A card longer than a caption anyone would post? Any of those can
-     be turned into a number. -->
-
-
-
-**Why this target:**
+Passing the item along is pure code: the loop reads `selected_item` out of the
+session and hands it to the next tool. There is no model involved in that step,
+so the ids either match every time or my session handling is broken. I'm
+checking the `id` rather than the title because two listings could share
+similar titles, but ids are unique.
 
 
 
 ---
 
-## 5. Your choice
+## 4. The fit card is a postable caption with the facts right
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
-
-
+For 5 different matching items, each fit card is 2–4 sentences, contains the
+item's exact price (e.g. `$24`) and its platform name, and never contains the
+words `None` or `null` — at least 4 of 5 cards pass all four checks.
 
 **Why this target:**
+The caption comes from the model, so its wording changes every run and I can't
+control it fully. I can put the price and platform in the prompt, but the model
+may still leave one out or run long, so I allow one miss. The `None` check is
+there because 32 of the 40 listings have no brand: if my prompt fills in a
+missing brand, the caption would say "None", and I want to catch that.
+
+
+
+---
+
+## 5. Search respects the size and price the user asked for
+
+For 5 queries that include a size and/or a price ceiling, every listing in
+`session["search_results"]` costs no more than the ceiling and has the
+requested size as a whole size token (or is One Size) — 5 of 5 queries, with
+zero wrong listings across all of them.
+
+**Why this target:**
+The sizes in the data come in four different formats (`S/M`, `W30 L30`,
+`US 9`, `One Size`), and a simple substring test returns shoes when someone asks
+for a small (`"s" in "us 9"`). This filter is deterministic code, so one wrong
+listing is a bug I can find and fix, not model randomness. A user who asked for
+"under $30" and sees a $45 item stops trusting every other result.
 
 
 

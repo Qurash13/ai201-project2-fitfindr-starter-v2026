@@ -538,9 +538,9 @@ I am obsessed with this vintage Wrangler cropped denim jacket that I found on Po
 **Did it help, and how do I know:** Yes. Seller-voice fit cards went from 32 of
 40 to 0 of 40 on reading, with the same 8 items and the same number of tries.
 Nothing I was already passing broke: all five criteria are still 5/5, and every
-card still names the right platform. Every after card I read starts with what
-I did ("Scored", "Found", "Just thrifted") instead of telling someone to buy
-it.
+card still names the right platform. All 40 after cards open in the buyer's
+voice: 25 start with "Scored", 11 with "I", 2 with "Score!", and 1 each with
+"Just" and "Finally".
 
 ---
 
@@ -575,7 +575,8 @@ cover, and what I'd do about each.
   because of "my closet". It was good enough to show a 32 → 0 change I could
   confirm by reading, but a better check would need someone (or a model) to
   judge the voice.
-- **Each MCP search restarts the server**, which adds about a second per run.
+- **Each MCP search restarts the server.** I timed it at 1.23s through MCP
+  versus 0.001s calling `search_listings` directly.
   Fine for one user. I'd keep a connection open if this were serving lots of
   people.
 <!-- ═════════════════════════════════════════════════════════════════════
